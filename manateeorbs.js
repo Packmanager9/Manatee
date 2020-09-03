@@ -2,6 +2,9 @@
 window.addEventListener('DOMContentLoaded', (event) =>{
 
 
+    let timelimit = 120000
+    let timestep = 14
+    let mode = 0
     let waters = []
     let stars = []
     let keysPressed = {}
@@ -38,6 +41,16 @@ window.addEventListener('DOMContentLoaded', (event) =>{
           tip.y = ys
     
           tip.body = tip
+
+          if(mode == 0){
+
+            if(freebutton.isPointInside(tip)){
+                mode = 1
+            }
+            if(timebutton.isPointInside(tip)){
+                mode = 2
+            }
+          }
 
      });
     
@@ -377,6 +390,8 @@ window.addEventListener('DOMContentLoaded', (event) =>{
     }
     class Manatee{
         constructor(){
+            this.scoreincrement = 0
+            this.score = 0
             this.path = []
             this.body = new Circle(350, 350, 5, "red")
             this.head = new Circle(350, 351, 3, "yellow")
@@ -388,6 +403,8 @@ window.addEventListener('DOMContentLoaded', (event) =>{
             this.prevx = 350
             this.prevy = 350
             this.maxspeed = 300
+            this.entries = 0
+            this.break = 0
         }
         draw(){
             for(let t= 0; t<this.path.length; t++){
@@ -403,34 +420,48 @@ window.addEventListener('DOMContentLoaded', (event) =>{
             for(let t = 0; t<waters.length; t++){
 
                 if(waters[t].isPointInside(this.body)){
+
+                    // this.break = 1
+
+                    
                     wet = 1
                     this.gravity = 0
                     if(this.jumping == 1){
                         // console.log(Rax(this.trajectoyangleflip), Rax(this.globalangle))
-                        // if(this.)
     
                         if(Math.abs(((Rax(this.trajectoyangleflip)+90)%360) - ((Rax(this.globalangle)+90)%360)) < 20){
                             this.maxspeed-= 3
                             this.maxspeed*=.95
-                            console.log(this.maxspeed)
+                            this.entries+=2
+                            this.scoreincrement+=.2
+                            // water.color = "red"
+                            this.break = 0
+                            // console.log(this.maxspeed)
                             if(this.maxspeed < 30){
                                 this.maxspeed = 30
                             }
                         }else if(Math.abs(((Rax(this.trajectoyangleflip)+90)%360) - ((Rax(this.globalangle)+90)%360)) < 30){
                             this.maxspeed-= 2
-                            console.log(this.maxspeed)
+                            this.entries+=1
+                            this.scoreincrement+=.1
+                            this.break = 0
+                            // console.log(this.maxspeed)
                             if(this.maxspeed < 33.5){
                                 this.maxspeed = 33.5
                             }
                         }else if(Math.abs(((Rax(this.trajectoyangleflip)+90)%360) - ((Rax(this.globalangle)+90)%360)) < 40){
                             this.maxspeed-= 1
-                            console.log(this.maxspeed)
+                            this.entries+=1
+                            this.scoreincrement+=.05
+                            this.break = 0
+                            // console.log(this.maxspeed)
                             if(this.maxspeed < 35){
                                 this.maxspeed = 35
                             }
-                        }
-                        if(Math.abs(((Rax(this.trajectoyangleflip)+90)%360) - ((Rax(this.globalangle)+90)%360)) > 90){
+                        }else if(Math.abs(((Rax(this.trajectoyangleflip)+90)%360) - ((Rax(this.globalangle)+90)%360)) > 90){
                             this.maxspeed +=10
+                            this.entries -=1
+                            this.break = 1
                             if(this.maxspeed > 300){
                                 this.maxspeed = 300
                             }
@@ -444,8 +475,22 @@ window.addEventListener('DOMContentLoaded', (event) =>{
             
             if(wet == 0){
                 this.jumping = 1
+                this.score+=this.scoreincrement
                 this.gravity = .06 //.075
             }
+
+            if(this.entries > 3){
+                this.entries = 3
+            }
+                if(this.break > 0){
+                    if(this.entries > 0){
+                        this.entries -=1
+                    }else{
+                this.scoreincrement = 0
+                }
+                this.break = 0
+                }
+
             this.control()
             this.body.ymom+=this.gravity
 
@@ -464,11 +509,14 @@ window.addEventListener('DOMContentLoaded', (event) =>{
                     this.maxspeed = 100
                     this.body.ymom*=.5
                     this.body.xmom*=.5
+
+                    this.break = 1
                 }
             }
             if(seabed.isPointInside(this.head)){
                 if(this.body.ymom > 0){
-                    this.body.ymom *= -1
+                    this.body.ymom *= -.9
+                    this.break = 1
                 }
             }
             this.body.draw()
@@ -486,15 +534,27 @@ window.addEventListener('DOMContentLoaded', (event) =>{
                  this.path.push(whiteline)
                  this.path.push(cyanline)
             this.head.draw()
+
+
+        tutorial_canvas_context.fillStyle = "white";
+        tutorial_canvas_context.font = `${14}px Arial`
+        tutorial_canvas_context.fillText(`Score ${Math.round(this.score)}`,this.body.x-320, this.body.y-320);
+        tutorial_canvas_context.fillText(`Combo ${Math.round(this.scoreincrement*100)/100}`,this.body.x-320, this.body.y-300);
         }
 
 
         control(){
-            if(keysPressed['a']){
-                this.globalangle -= .05
-            }
-            if(keysPressed['d']){
-                this.globalangle += .05
+            if(keysPressed['a'] || (keysPressed['d'])){
+                if(keysPressed['a'] || (keysPressed['A'])){
+                    this.globalangle -= .05
+                }
+                if(keysPressed['D'] || (keysPressed['d'])){
+                    this.globalangle += .05
+                }
+                if(this.jumping == 1){
+                    this.scoreincrement +=(.05/(Math.PI*2))
+                   
+                }
             }
             // this.globalangle%=(Math.PI*2)
             if(keysPressed['w']){
@@ -506,6 +566,56 @@ window.addEventListener('DOMContentLoaded', (event) =>{
         }
     }
 
+
+    class RectangleL {
+        constructor(x, y, height, width, color, text ="") {
+            this.n = text
+            this.m = ""
+            // numcount++
+            this.x = x
+            this.y = y
+            this.height = height
+            this.width = width
+            this.color = color
+            this.xmom = 0
+            this.ymom = 0
+        }
+        draw(){
+            tutorial_canvas_context.fillStyle = this.color
+            tutorial_canvas_context.fillRect(this.x, this.y, this.width, this.height)
+            tutorial_canvas_context.fillStyle = "black";
+            tutorial_canvas_context.font = `${this.height/1.3}px arial`;
+            tutorial_canvas_context.fillText(`${this.n}`, this.x+(.1*this.width), this.y+(.82*this.height));
+            tutorial_canvas_context.fillStyle = "white";
+            tutorial_canvas_context.fillText(`${this.m}`, this.x+(.3*this.width), this.y+(2.82*this.height));
+        }
+        move(){
+
+            this.x+=this.xmom
+            this.y+=this.ymom
+
+        }
+
+        isPointInside(point){
+            if(point.x >= this.x){
+                if(point.y >= this.y){
+                    if(point.x <= this.x+this.width){
+                        if(point.y <= this.y+this.height){
+                        return true
+                        }
+                    }
+                }
+            }
+            return false
+        }
+    }
+
+
+    let timer = 0
+
+
+    let freebutton = new RectangleL(200, 350, 30, 165, "white",`Free Swim`)
+    let timebutton = new RectangleL(410, 350, 30, 100, "white",`Timed`)
     let tune = new Manatee()
     water = new Rectangle(-100000000, 350, 900, 200000000, "#00AAFF44")
    waters.push(water)
@@ -517,21 +627,22 @@ window.addEventListener('DOMContentLoaded', (event) =>{
     seabed = new Rectangle(-1000000, 1250, 1000000, 2000000, "#FFFFAA")
     // let wall = 
 
-    for(let h = 0; h < 400000; h++){
-        let a1 = new Rectangle(-350000+(Math.random()*tutorial_canvas.width*1000), (10*Math.random()*tutorial_canvas.height)-6650, ((Math.random()*6)+1.45),((Math.random()*6)+1.45), getRandomLightColor())
+    for(let h = 0; h < 200000; h++){
+        let a1 = new Rectangle(-280000+(Math.random()*tutorial_canvas.width*800), (12*Math.random()*tutorial_canvas.height)-8150, ((Math.random()*6)+1.45),((Math.random()*6)+1.45), getRandomLightColor())
 
         if(Math.random()<.9){
             stars.push(a1)
         }
 
-        if(Math.random()<.15){
-        let drop = new Circle(a1.x, a1.y, 5*(a1.width*a1.height+1), "#00AAFF44")
+        if(Math.random()<.17){
+        let drop = new Circle(a1.x, a1.y, 4*(a1.width*a1.height+1), "#00AAFF44")
 
         let wet = 0
 
         for(let t = 1; t<waters.length;t++){
             if(waters[t].repelCheck(drop)){
                 wet = 1
+                break
             }
         }
 
@@ -546,28 +657,63 @@ window.addEventListener('DOMContentLoaded', (event) =>{
 
     window.setInterval(function(){ 
         tutorial_canvas_context.clearRect(-1000000000,-1000000000,tutorial_canvas.width*10000000, tutorial_canvas.height*10000000)
-        tune.draw()
-        seabed.draw()
-        
-        for(let t = 0; t<waters.length;t++){
-        let link = new Line(tune.body.x, tune.body.y, waters[t].x, waters[t].y, "red", 1)
-        // link.draw()
-        if(link.hypotenuse() < 700){
-            waters[t].draw()
+        if(mode == 1){
+            tune.draw()
+            seabed.draw()
+            for(let t = 0; t<waters.length;t++){
+            let link = new Line(tune.body.x, tune.body.y, waters[t].x, waters[t].y, "red", 1)
+            if(link.hypotenuse() < 700){
+                waters[t].draw()
+            }
         }
-    }
-    water.draw()
+        water.draw()        
+        for(let h = 0; h<stars.length; h++){
+            let link = new Line(tune.body.x, tune.body.y, stars[h].x, stars[h].y, "red", 1)
+            if(link.hypotenuse() < 1700){
+    
+                stars[h].draw()
+    
+            }
+        }
+        }else if( mode == 2){
+            if( timer < timelimit){
+                tune.draw()
+                seabed.draw()
+                for(let t = 0; t<waters.length;t++){
+                let link = new Line(tune.body.x, tune.body.y, waters[t].x, waters[t].y, "red", 1)
+                if(link.hypotenuse() < 700){
+                    waters[t].draw()
+                }
+            }
+            water.draw()        
+            for(let h = 0; h<stars.length; h++){
+                let link = new Line(tune.body.x, tune.body.y, stars[h].x, stars[h].y, "red", 1)
+                if(link.hypotenuse() < 1700){
         
-    for(let h = 0; h<stars.length; h++){
-        let link = new Line(tune.body.x, tune.body.y, stars[h].x, stars[h].y, "red", 1)
-        // link.draw()
-        if(link.hypotenuse() < 1700){
+                    stars[h].draw()
+        
+                }
+            }
+            timer+=timestep
+            
+            }
+        tutorial_canvas_context.fillStyle = "white";
+        tutorial_canvas_context.font = `${14}px Arial`
+        tutorial_canvas_context.fillText(`Time ${Math.round(Math.round((timelimit-timer)/1000))}`,tune.body.x+270, tune.body.y-320);
+        if(timer > timelimit){
+        tutorial_canvas_context.fillStyle = "white";
+        tutorial_canvas_context.font = `${50}px Arial`
+        tutorial_canvas_context.fillText(`Score ${Math.round(tune.score)}`,tune.body.x-120, tune.body.y-0);
+        }
+        }else{
 
-            stars[h].draw()
+
+            freebutton.draw()
+            timebutton.draw()
+
 
         }
-    }
-    }, 14) 
+    }, timestep) 
 
     function Rax(isn){
         let out = isn*(180 / Math.PI)
